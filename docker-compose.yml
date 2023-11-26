@@ -1,0 +1,66 @@
+version: "3"
+
+services:
+  redis:
+    image: redis:7.0-bookworm
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-data:/data
+    entrypoint: redis-server --save 60 1 --loglevel warning
+
+  mysql:
+    image: mysql:8.0-debian
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+
+  mongo:
+    image: mongo:7
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-data:/data/db
+
+  selenium:
+    image: selenium/standalone-chrome:119.0
+    shm_size: "2gb"
+    ports:
+      - 4444:4444
+      - 7900:7900
+
+  alist:
+    image: xhofe/alist:latest
+    ports:
+      - 5244:5244
+    volumes:
+      - /etc/alist:/opt/alist/data
+    environment:
+      PUID: 0
+      PGID: 0
+      UMASK: 022
+
+  aria2:
+    image: p3terx/aria2-pro:latest
+    ports:
+      - 6800:6800
+      - 6888:6888
+      - 6888:6888/udp
+    volumes:
+      - /etc/aria2:/config
+      - $DATA_PWD/aria2-downloads:/downloads
+    environment:
+      PUID: 0
+      PGID: 0
+      UMASK: 022
+      RPC_SECRET: $RPC_SECRET
+      RPC_PORT: 6800
+      LISTEN_PORT: 6888
+
+volumes:
+  redis-data:
+  mysql-data:
+  mongo-data:
