@@ -24,6 +24,7 @@ services:
       - 27017:27017
     volumes:
       - mongo-data:/data/db
+      - mongo-configdb:/data/configdb
 
   selenium:
     image: selenium/standalone-chrome:119.0
@@ -60,7 +61,34 @@ services:
       RPC_PORT: 6800
       LISTEN_PORT: 6888
 
+  bilibili-download:
+    build: ./bilibili_download
+    volumes:
+      - /mnt/appdata/bilibili_download:/download
+    environment:
+      UPLOAD_URL: http://192.168.1.13:5000
+
+  lofter-download:
+    build: ./lofter_download
+    volumes:
+      - /mnt/appdata/lofter_download:/download
+    environment:
+      RUN_HOUR: 6
+      UPLOAD_URL: http://192.168.1.13:5000/upload_bdpic
+      HOMEPAGE_URL: $HOMEPAGE_URL
+
+  qzone-download:
+    build: ./QzoneCrawler
+    volumes:
+      - /mnt/appdata/qzone_download:/download
+    environment:
+      QQ_ACCOUNT: $QQ_ACCOUNT
+      QQ_PASSWORD: $QQ_PASSWORD
+      RUN_HOUR: 22
+      WEBDRIVER_URL: http://192.168.1.55:4444/wd/hub
+
 volumes:
   redis-data:
   mysql-data:
   mongo-data:
+  mongo-configdb:

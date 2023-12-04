@@ -15,7 +15,7 @@ RUN apk add --no-cache tzdata && cp /usr/share/zoneinfo/Asia/Shanghai /etc/local
 # 安装依赖
 RUN apk add --no-cache gcc musl-dev libxslt-dev
 
-RUN pip3 install html2text requests apscheduler tenacity lxml --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip3 install html2text requests apscheduler tenacity lxml tzdata --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 添加文件
 COPY *.py /lof/
