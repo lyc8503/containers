@@ -17,7 +17,6 @@ logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(leve
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 ' \
              'Safari/537.36 '
 user_cookie = None
-DOWNLOAD_INTERVAL = 1 * 3600 * 24  # 一天
 TIMEOUT = 20 * 60  # 20分钟
 
 # 输出位置
@@ -44,7 +43,7 @@ def validate_title(title):
 
 
 @retry(wait=wait_fixed(10), stop=stop_after_attempt(3), reraise=True)
-def download_bvid(bvid):
+def download_bvid(bvid, cid):
 
     referer = "https://www.bilibili.com/video/" + bvid
 
@@ -57,7 +56,7 @@ def download_bvid(bvid):
     })
 
     info = r.json()
-    path_name = validate_title(info['data']['title'])
+    path_name = bvid + "_" + cid + "_" + validate_title(info['data']['title'])
     try:
         os.mkdir(path_name)
     except Exception as e:
@@ -86,16 +85,21 @@ def download_bvid(bvid):
         "bvid": bvid,
         "cid": info['data']['cid'],
         "qn": 80  # 1080P(但不登陆可能只能获取到 720P)
-    })
+    }, headers={
+        "Referer": referer,
+        "User-Agent": USER_AGENT
+    }).json()
 
-    download_link = r.json()['data']['durl'][0]['url']
+    download_link = r['data']['durl'][0]['url']
 
+    logging.info('下载视频中: ' + download_link)
     download_r = requests.get(download_link, headers={
         "Referer": referer,
         "User-Agent": USER_AGENT
-    }, stream=True, timeout=TIMEOUT)
+    }, stream=False, timeout=TIMEOUT)
 
-    r = requests.post(os.environ['UPLOAD_URL'] + "/upload/" + quote(path_name + ".flv", safe=''), files={
+    logging.info('上传视频中, 大小: ' + str(len(download_r.content) / 1024 / 1024) + ' MiB')
+    r = requests.post(os.environ['UPLOAD_URL'] + "/upload/" + quote(path_name + ".mp4", safe=''), files={
         'file': download_r.content
     }, timeout=TIMEOUT)
 
@@ -104,6 +108,7 @@ def download_bvid(bvid):
     else:
         with open(path_name + os.sep + "upload.info", "w") as f:
             f.write(r.text)
+        logging.info('内容保存至: ' + path_name)
 
     # ret = EasyProcess(["aria2c", "--referer=" + referer, "-o", path_name + os.sep + "video.flv",
     #                    download_link]).call(timeout=TIMEOUT).return_code
@@ -176,7 +181,7 @@ def check_and_download():
         for i in to_download_list:
             logging.info("开始下载: " + i['history']['bvid'])
             try:
-                download_bvid(i['history']['bvid'])
+                download_bvid(i['history']['bvid'], str(i['history']['cid']))
                 logging.info("下载成功: " + i['history']['bvid'])
                 success += 1
             except Exception as e:

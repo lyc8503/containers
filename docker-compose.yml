@@ -68,24 +68,24 @@ services:
     environment:
       UPLOAD_URL: http://192.168.1.13:5000
 
-  lofter-download:
-    build: ./lofter_download
-    volumes:
-      - /mnt/appdata/lofter_download:/download
-    environment:
-      RUN_HOUR: 6
-      UPLOAD_URL: http://192.168.1.13:5000/upload_bdpic
-      HOMEPAGE_URL: $HOMEPAGE_URL
+  # lofter-download:
+  #   build: ./lofter_download
+  #   volumes:
+  #     - /mnt/appdata/lofter_download:/data
+  #   environment:
+  #     RUN_HOUR: 6
+  #     UPLOAD_URL: http://192.168.1.13:5000/upload_bdpic
+  #     HOMEPAGE_URL: $HOMEPAGE_URL
 
-  qzone-download:
-    build: ./QzoneCrawler
-    volumes:
-      - /mnt/appdata/qzone_download:/download
-    environment:
-      QQ_ACCOUNT: $QQ_ACCOUNT
-      QQ_PASSWORD: $QQ_PASSWORD
-      RUN_HOUR: 22
-      WEBDRIVER_URL: http://192.168.1.55:4444/wd/hub
+  # qzone-download:
+  #   build: ./QzoneCrawler
+  #   volumes:
+  #     - /mnt/appdata/qzone_download:/download
+  #   environment:
+  #     QQ_ACCOUNT: $QQ_ACCOUNT
+  #     QQ_PASSWORD: $QQ_PASSWORD
+  #     RUN_HOUR: 22
+  #     WEBDRIVER_URL: http://192.168.1.55:4444/wd/hub
 
 volumes:
   redis-data:

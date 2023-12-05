@@ -1,10 +1,10 @@
-FROM python:3.9.6-slim-buster
+FROM python:3.10.13-slim-bookworm
 
-MAINTAINER lyc8503 lyc8503@foxmail.com
+MAINTAINER lyc8503 me@lyc8503.site
 
 VOLUME /download
 
-COPY main.py /bilidown/
+WORKDIR /bilidown/
 
 # 修改时区
 ENV TZ=Asia/Shanghai \
@@ -17,17 +17,15 @@ RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
 
 # 安装依赖
 RUN Deps="aria2" \
-    && echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ buster main contrib non-free" > /etc/apt/sources.list \
+    && echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib non-free non-free-firmware" > /etc/apt/sources.list \
     && apt-get update \
     && apt-get install $Deps --no-install-recommends --no-install-suggests -y  \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /etc/apt/sources.list
 
-
 RUN pip3 install requests apscheduler easyprocess tenacity --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
 
-WORKDIR /bilidown/
+COPY main.py /bilidown/
 
 ENTRYPOINT python3 -u main.py
- 
