@@ -1,6 +1,6 @@
-FROM python:3.9.7-slim-bullseye
+FROM python:3.10.13-slim-bookworm
 
-MAINTAINER lyc8503 lyc8503@foxmail.com
+MAINTAINER lyc8503 me@lyc8503.site
 
 # 挂载位置
 VOLUME /download

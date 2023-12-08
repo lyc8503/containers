@@ -70,15 +70,15 @@ def download_and_save(pic_url):
             logging.warning("下载失败: " + pic_url)
             return
 
-        logging.info("上传: " + pic_url)
-        # 上传
-        r = requests.post(os.environ['UPLOAD_URL'] + "/" + md5.hexdigest() + suffix, files={
-            "file": r.content
-        }, timeout=30)
+        # logging.info("上传: " + pic_url)
+        # # 上传
+        # r = requests.post(os.environ['UPLOAD_URL'] + "/" + md5.hexdigest() + suffix, files={
+        #     "file": r.content
+        # }, timeout=30)
 
-        if not r:
-            logging.warning("上传失败: " + r.text)
-            return
+        # if not r:
+        #     logging.warning("上传失败: " + r.text)
+        #     return
 
         try:
             try:
@@ -88,8 +88,8 @@ def download_and_save(pic_url):
             
             # use first 240 bytes as filename
             with open(f"/download/img/{prefix}/" + pic_url.replace("/", "_").replace(":", "_")[:240], "wb") as f:
-                f.write(pic_url.encode("utf-8"))
-                f.write(b'\n')
+                # f.write(pic_url.encode("utf-8"))
+                # f.write(b'\n')
                 f.write(r.content)
 
             logging.info("保存成功: " + pic_url)
@@ -102,6 +102,7 @@ def download_and_save(pic_url):
 
 def timer_task():
     try:
+        liked_posts = {}
         posts = {}
         tags = set()
         authors = set()
@@ -122,6 +123,7 @@ def timer_task():
                     tags.add(j)
 
                 posts[post_id] = i
+                liked_posts[post_id] = i
             except Exception as e:
                 logging.warning("Error", exc_info=e)
 
@@ -179,7 +181,7 @@ def timer_task():
         wechat_push(f"内容保存完成, 新增: {count}, 下载图片中...")
 
         imgs = []
-        for i in posts:
+        for i in liked_posts:
             try:
                 imgs += posts[i].get('img', [])
                 if 'photoLinks' in posts[i]:

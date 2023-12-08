@@ -185,8 +185,7 @@ def check_and_download():
                 logging.info("下载成功: " + i['history']['bvid'])
                 success += 1
             except Exception as e:
-                logging.error(e)
-                logging.warning("下载失败: " + i['history']['bvid'])
+                logging.exception("下载失败: " + i['history']['bvid'])
                 wechat_push("下载失败: " + i['history']['bvid'])
                 fail += 1
             logging.info("[进度回报]成功: " + str(success) + ", 失败: " + str(fail)
