@@ -6,7 +6,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 from fetch import UA
-from util import wechat_push_img, wechat_push, get_latest_sms_code
+from util import wechat_push_img, wechat_push
 
 
 def cookie_to_str(cookies_dict):
@@ -51,33 +51,14 @@ def password_login(username, password):
         driver.find_element(By.ID, 'login_button').click()
         time.sleep(5)
 
-        for i2 in range(0, 10):
+        for i2 in range(0, 20):
             time.sleep(1)
             if "user.qzone.qq.com" in driver.current_url:
                 break
         else:
-            wechat_push("登录失败! 凭据错误/触发风控, 尝试验证手机短信")
+            wechat_push("登录失败! 凭据错误/触发风控")
             wechat_push_img(driver.get_screenshot_as_base64())
-
-        try:
-            wechat_push("尝试发送手机验证码登录...")
-            driver.switch_to.frame('verify')
-            driver.find_element(By.CLASS_NAME, 'input-area__sms-btn').click()
-            time.sleep(1)
-            driver.find_element(By.XPATH, '//input[@maxlength="6"]').send_keys(get_latest_sms_code())
-            time.sleep(1)
-            driver.find_element(By.CLASS_NAME, 'qui-button__inner').click()
-        except Exception as e:
-            wechat_push("尝试手机验证码登录失败: " + str(e))
-            wechat_push_img(driver.get_screenshot_as_base64())
-
-        for i2 in range(0, 10):
-            time.sleep(1)
-            if "user.qzone.qq.com" in driver.current_url:
-                break
-        else:
-            wechat_push_img(driver.get_screenshot_as_base64())
-            raise Exception("登录失败!")
+            raise Exception("登录失败! 凭据错误/触发风控")
 
         return cookie_to_str(driver.get_cookies())
 

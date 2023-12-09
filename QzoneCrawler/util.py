@@ -28,24 +28,6 @@ def wechat_push_img(b64):
     }, timeout=5).text)
 
 
-def get_latest_sms_code():
-    for i in range(1, 50):
-        try:
-            r = requests.get("https://lyc-webdis.azurewebsites.net/get/phone_sms",
-                             timeout=5, auth=HTTPBasicAuth("webdis", os.environ['WEBDIS_PASSWORD'])).json()
-
-            print(r)
-            if int(r['get'].split(",")[0]) > int(time.time()) * 1000 - 1000 * 60 * 5 and "验证码" in r['get']:
-                return re.findall(r"验证码(\d{6})", r['get'])[0]
-
-        except Exception as e:
-            print("Error while fetching sms code: " + str(e))
-
-        time.sleep(1.5)
-    else:
-        raise Exception("获取短信验证码失败")
-
-
 def to_json(string):
     logging.debug(string)
 

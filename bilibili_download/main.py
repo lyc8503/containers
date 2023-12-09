@@ -92,7 +92,7 @@ def download_bvid(bvid, cid):
 
     download_link = r['data']['durl'][0]['url']
 
-    logging.info('下载视频中: ' + download_link)
+    logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
     download_r = requests.get(download_link, headers={
         "Referer": referer,
         "User-Agent": USER_AGENT

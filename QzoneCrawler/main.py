@@ -41,7 +41,7 @@ def try_login_and_get():
         passwd = os.environ['QQ_PASSWORD']
         cookie = password_login(login_uin, passwd)
     except Exception as e:
-        logging.error("账号密码登录出错: ", e)
+        logging.exception("账号密码登录出错: ")
         wechat_push("账号密码登录时出错: " + str(e))
         wechat_push("尝试使用二维码登录...")
         try:
@@ -51,6 +51,7 @@ def try_login_and_get():
             wechat_push("二维码登录出错: " + str(e))
 
     counter = 0
+    failed = 0
 
     try:
         friends_list = get_friends(login_uin, cookie)
@@ -123,10 +124,10 @@ def try_login_and_get():
             except Exception as e:
                 logging.error(e)
                 logging.warning("获取 " + str(friend_uin) + " 的空间时发生错误, 程序继续.")
-                wechat_push("获取 " + str(friend_uin) + " 的空间时发生错误, 程序继续.")
+                failed += 1
 
         logging.info("完成!")
-        wechat_push("抓取成功, 新增/更新条数: " + str(counter))
+        wechat_push(f"抓取成功, 新增/更新条数: {counter}, 失败人数: {failed}/{len(friends_list)}")
     except Exception as e:
         logging.error(e)
         wechat_push("程序运行发生错误: " + str(e))
