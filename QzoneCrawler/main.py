@@ -15,7 +15,7 @@ import time
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from fetch import get_friends, get_uin_info, get_shuoshuo_all, get_detail, UA
-from login import password_login, qr_login
+from login import password_login, qr_login, client_login
 from util import wechat_push
 
 login_uin = ""
@@ -36,19 +36,29 @@ def try_login_and_get():
 
     cookie = ""
 
-    try:
-        login_uin = os.environ['QQ_ACCOUNT']
-        passwd = os.environ['QQ_PASSWORD']
-        cookie = password_login(login_uin, passwd)
-    except Exception as e:
-        logging.exception("账号密码登录出错: ")
-        wechat_push("账号密码登录时出错: " + str(e))
-        wechat_push("尝试使用二维码登录...")
+    if 'CLIENT_PROXY' in os.environ:
         try:
-            cookie = qr_login()
+            login_uin = os.environ['QQ_ACCOUNT']
+            cookie = client_login(login_uin)
         except Exception as e:
-            logging.exception(e)
-            wechat_push("二维码登录出错: " + str(e))
+            logging.exception("客户端代理快速登录出错: ")
+    else:
+        assert False, "暂时只支持客户端代理快速登录, 其他登录方式常常出错"
+
+    # if cookie == "":
+    #     try:
+    #         login_uin = os.environ['QQ_ACCOUNT']
+    #         passwd = os.environ['QQ_PASSWORD']
+    #         cookie = password_login(login_uin, passwd)
+    #     except Exception as e:
+    #         logging.exception("账号密码登录出错: ")
+    #         wechat_push("账号密码登录时出错: " + str(e))
+    #         wechat_push("尝试使用二维码登录...")
+    #         try:
+    #             cookie = qr_login()
+    #         except Exception as e:
+    #             logging.exception(e)
+    #             wechat_push("二维码登录出错: " + str(e))
 
     counter = 0
     failed = 0

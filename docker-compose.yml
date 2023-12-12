@@ -86,6 +86,7 @@ services:
       QQ_PASSWORD: $QQ_PASSWORD
       RUN_HOUR: 22
       WEBDRIVER_URL: http://selenium:4444/wd/hub
+      CLIENT_PROXY: 192.168.1.14:4567
 
   tele-upload:
     build: ./tele_upload
