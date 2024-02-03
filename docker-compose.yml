@@ -3,6 +3,7 @@ version: "3"
 services:
   redis:
     image: redis:7.0-bookworm
+    restart: unless-stopped
     ports:
       - 6379:6379
     volumes:
@@ -11,6 +12,7 @@ services:
 
   mysql:
     image: mysql:8.0-debian
+    restart: unless-stopped
     ports:
       - 3306:3306
     volumes:
@@ -20,6 +22,7 @@ services:
 
   mongo:
     image: mongo:7
+    restart: unless-stopped
     ports:
       - 27017:27017
     volumes:
@@ -28,6 +31,7 @@ services:
 
   selenium:
     image: selenium/standalone-chrome:119.0
+    restart: unless-stopped
     shm_size: "2gb"
     ports:
       - 4444:4444
@@ -35,6 +39,7 @@ services:
 
   alist:
     image: xhofe/alist:latest
+    restart: unless-stopped
     ports:
       - 5244:5244
     volumes:
@@ -46,6 +51,7 @@ services:
 
   aria2:
     image: p3terx/aria2-pro:latest
+    restart: unless-stopped
     ports:
       - 6800:6800
       - 6888:6888
@@ -63,6 +69,7 @@ services:
 
   bilibili-download:
     build: ./bilibili_download
+    restart: unless-stopped
     volumes:
       - /mnt/appdata/bilibili_download:/download
     environment:
@@ -71,6 +78,7 @@ services:
 
   lofter-download:
     build: ./lofter_download
+    restart: unless-stopped
     volumes:
       - /mnt/appdata/lofter_download:/download
     environment:
@@ -79,6 +87,7 @@ services:
 
   qzone-download:
     build: ./QzoneCrawler
+    restart: unless-stopped
     volumes:
       - /mnt/appdata/qzone_download:/download
     environment:
@@ -90,6 +99,7 @@ services:
 
   tele-upload:
     build: ./tele_upload
+    restart: unless-stopped
     volumes:
       - /tmp:/tmp
     ports:
