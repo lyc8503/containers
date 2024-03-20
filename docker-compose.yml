@@ -106,6 +106,16 @@ services:
       - 5000:5000
     stdin_open: true
     tty: true
+  
+  upload-server:
+    build: ./upload_server
+    restart: unless-stopped
+    volumes:
+      - /mnt/appdata/uploaded:/uploaded
+      - /mnt/appdata/certs/upload-key.pem:/key.pem
+      - /mnt/appdata/certs/upload.pem:/cert.pem
+    ports:
+      - 3000:3000
 
 volumes:
   redis-data:
