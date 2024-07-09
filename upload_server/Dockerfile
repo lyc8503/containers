@@ -1,5 +1,5 @@
 FROM python:3.10.13-slim-bookworm
-MAINTAINER lyc8503 me@lyc8503.site
+MAINTAINER lyc8503 me@lyc8503.net
 
 VOLUME /uploaded
 RUN pip3 install fastapi uvicorn python-multipart --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple

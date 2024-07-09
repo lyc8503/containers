@@ -1,6 +1,6 @@
 FROM python:3.10.13-slim-bookworm
 
-MAINTAINER lyc8503 me@lyc8503.site
+MAINTAINER lyc8503 me@lyc8503.net
 
 # 挂载位置
 VOLUME /download
