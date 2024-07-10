@@ -56,6 +56,8 @@ def download_bvid(bvid, cid):
     })
 
     info = r.json()
+    if 'data' not in info:
+        raise AssertionError("获取视频信息失败: " + r.text)
     path_name = bvid + "_" + cid + "_" + validate_title(info['data']['title'])
     try:
         os.mkdir(path_name)
@@ -90,7 +92,12 @@ def download_bvid(bvid, cid):
         "User-Agent": USER_AGENT
     }).json()
 
+    if 'data' not in r:
+        raise AssertionError("获取视频下载链接失败: " + str(r))
     download_link = r['data']['durl'][0]['url']
+    if '.mcdn.bilivideo.cn' in download_link:
+        logging.info('检测到 PCDN, 原链接: ' + download_link)
+        download_link = re.sub(r'://.*mcdn\.bilivideo\.cn:.*?/', '://upos-sz-mirrorcos.bilivideo.com/', download_link)
 
     logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
     download_r = requests.get(download_link, headers={
@@ -186,7 +193,7 @@ def check_and_download():
                 success += 1
             except Exception as e:
                 logging.exception("下载失败: " + i['history']['bvid'])
-                wechat_push("下载失败: " + i['history']['bvid'])
+                wechat_push("下载失败: " + i['history']['bvid'] + " " + str(e))
                 fail += 1
             logging.info("[进度回报]成功: " + str(success) + ", 失败: " + str(fail)
                          + ", 进度: " + str((success + fail) / len(to_download_list)))
