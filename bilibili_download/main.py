@@ -215,18 +215,18 @@ def check_login():
 # 尝试登录一次
 def login():
     # 获取登录二维码链接
-    r = requests.get("https://passport.bilibili.com/qrcode/getLoginUrl", headers={
+    r = requests.get("https://passport.bilibili.com/x/passport-login/web/qrcode/generate", headers={
         "User-Agent": USER_AGENT
     })
 
     qr_url = ""
-    oauth_key = ""
+    qr_key = ""
 
     ret = r.json()
 
-    if ret['code'] == 0:
+    if ret.get('code') == 0:
         qr_url = ret['data']['url']
-        oauth_key = ret['data']['oauthKey']
+        qr_key = ret['data']['qrcode_key']
         logging.info("获取登录链接: " + qr_url)
     else:
         raise Exception("获取登录链接失败: " + r.text)
@@ -235,28 +235,26 @@ def login():
     wechat_push("请扫描链接中二维码登录: " + "https://cli.im/api/qrcode/code?text=" + quote(qr_url))
 
     while True:
-        r = requests.post("https://passport.bilibili.com/qrcode/getLoginInfo", headers={
+        r = requests.get("https://passport.bilibili.com/x/passport-login/web/qrcode/poll", headers={
             "User-Agent": USER_AGENT
-        }, data={
-            "oauthKey": oauth_key,
-            "gourl": "https://www.bilibili.com/"
+        }, params={
+            "qrcode_key": qr_key
         })
         ret = r.json()
-        if ret['data'] == -4:
-            logging.info("等待登录...")
-        elif ret['data'] == -2:
-            raise TimeoutError("登录超时!")
-        elif ret['data'] == -5:
-            logging.info("等待确认...")
-        elif ret['status']:
-            logging.info("登录成功! Cookie: " + str(r.cookies.get_dict()))
-            # 设置 cookie
-            global user_cookie
-            user_cookie = r.cookies.get_dict()
-            wechat_push("登录成功!")
-            break
-        else:
-            raise AssertionError("未知情况: " + r.text)
+        
+        try:
+            logging.info("等待登录: " + ret['data']['message'])
+            if ret['data']['message'] == "二维码已失效":
+                raise TimeoutError("登录超时")
+            elif ret['data']['refresh_token'] != "":
+                logging.info("登录成功! Cookie: " + str(r.cookies.get_dict()))
+                # 设置 cookie
+                global user_cookie
+                user_cookie = r.cookies.get_dict()
+                wechat_push("登录成功!")
+                break
+        except Exception as e:
+            raise AssertionError("登录过程出错: " + str(e) + " " + r.text)
 
         time.sleep(5)
 
