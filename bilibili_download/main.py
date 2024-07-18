@@ -95,9 +95,9 @@ def download_bvid(bvid, cid):
     if 'data' not in r:
         raise AssertionError("获取视频下载链接失败: " + str(r))
     download_link = r['data']['durl'][0]['url']
-    if '.mcdn.bilivideo.cn' in download_link:
-        logging.info('检测到 PCDN, 原链接: ' + download_link)
-        download_link = re.sub(r'://.*mcdn\.bilivideo\.cn:.*?/', '://upos-sz-mirrorcos.bilivideo.com/', download_link)
+    # if '.mcdn.bilivideo.cn' in download_link:
+    #     logging.info('检测到 PCDN, 原链接: ' + download_link)
+    #     download_link = re.sub(r'://.*mcdn\.bilivideo\.cn:.*?/', '://upos-sz-mirrorcos.bilivideo.com/', download_link)
 
     logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
     download_r = requests.get(download_link, headers={

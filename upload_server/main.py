@@ -13,6 +13,6 @@ async def upload_file(file: UploadFile = File(...)):
         os.mkdir(folder_path)
 
     file_location = folder_path / Path(file.filename).name
-    with open(file_location, "wb+") as file_object:
+    with open(file_location, "ab") as file_object:
         file_object.write(file.file.read())
     return {"msg": f"file '{file.filename}' saved"}
