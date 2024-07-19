@@ -7,23 +7,16 @@ import requests
 from util import parse_info
 
 
-def get_all_like(user_url):
+def get_all_like(blog_id):
     """
     获取 like 所有内容
     """
-    logging.info("获取 like 列表: " + user_url)
+    logging.info("获取 like 列表: " + blog_id)
     got = 0
     size = 100
     real_got = 0
 
     ret = []
-
-    r = requests.get(user_url, headers={
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-                      " Chrome/105.0.0.0 Safari/537.36"
-    }, timeout=20)
-    blog_id = re.search(r"blogId=(\d*)", r.text).group(1)
-    logging.info("blogId: " + blog_id)
 
     while True:
         payload = {

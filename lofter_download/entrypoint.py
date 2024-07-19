@@ -112,7 +112,7 @@ def timer_task():
         stat_tag = {}
 
         # 获取所有的原始喜欢列表
-        for i in get_all_like(os.environ['HOMEPAGE_URL']):
+        for i in get_all_like(os.environ['LOFTER_ID']):
             try:
                 author, post_id = parse_url(i["url"])
 

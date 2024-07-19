@@ -83,7 +83,7 @@ services:
       - /mnt/appdata/lofter_download:/download
     environment:
       RUN_HOUR: 6
-      HOMEPAGE_URL: $HOMEPAGE_URL
+      LOFTER_ID: $LOFTER_ID
 
   qzone-download:
     build: ./QzoneCrawler
