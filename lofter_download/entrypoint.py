@@ -3,8 +3,8 @@ import hashlib
 import json
 import logging
 import os
-import pickle
-from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
+from concurrent.futures import ThreadPoolExecutor, wait
+from berkeleydb import db as bdb
 
 import requests
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -18,15 +18,21 @@ from util import parse_url
 logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                     level=logging.INFO)
 
-try:
-    os.mkdir("/download/posts")
-except:
-    pass
-
-try:
+if not os.path.exists("/download/img"):
     os.mkdir("/download/img")
-except:
-    pass
+
+db = bdb.DB()
+if not os.path.exists("/download/posts.db"):
+    db.open("/download/posts.db", None, bdb.DB_HASH, bdb.DB_CREATE)
+else:
+    db.open("/download/posts.db", None, bdb.DB_HASH)
+
+
+class SetEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        return json.JSONEncoder.default(self, obj)
 
 
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
@@ -55,12 +61,6 @@ def download_and_save(pic_url):
     md5.update(pic_url.encode("utf-8"))
     prefix = md5.hexdigest()[:2]
 
-    suffix = ""
-    if ".jpg" in pic_url:
-        suffix = ".jpg"
-    else:
-        suffix = ".png"
-
     if not os.path.exists(f"/download/img/{prefix}/" + pic_url.replace("/", "@").replace(":", "@")):
         logging.info("下载保存: " + pic_url)
         pic_counter += 1
@@ -81,10 +81,8 @@ def download_and_save(pic_url):
         #     return
 
         try:
-            try:
+            if not os.path.exists("/download/img/" + prefix):
                 os.mkdir("/download/img/" + prefix)
-            except:
-                pass
             
             # use first 240 bytes as filename
             with open(f"/download/img/{prefix}/" + pic_url.replace("/", "_").replace(":", "_")[:240], "wb") as f:
@@ -157,26 +155,16 @@ def timer_task():
         wechat_push(f"获取所有内容完成, 文章共计: {len(posts)}")
 
         for k, v in posts.items():
-            md5 = hashlib.md5()
-            md5.update(k.encode("utf-8"))
-            prefix = md5.hexdigest()[:2]
+            if db.get(k.encode("utf-8")):
+                continue
 
-            save_path = f"/download/posts/{prefix}/{k}.json"
-
-            try:
-                os.mkdir(f"/download/posts/{prefix}/")
-            except:
-                pass
-
-            if not os.path.exists(save_path):
-                json.dump(v, open(save_path, "w"))
-                count += 1
+            db.put(k.encode("utf-8"), json.dumps(v, ensure_ascii=False).encode("utf-8"))
+            count += 1
 
         date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-        os.mkdir(f"/download/{date}")
-        pickle.dump(stat_like, open(f"/download/{date}/stat_like.pickle", "wb"))
-        pickle.dump(stat_author, open(f"/download/{date}/stat_author.pickle", "wb"))
-        pickle.dump(stat_tag, open(f"/download/{date}/stat_tag.pickle", "wb"))
+        db.put(b"stat_like_" + date.encode('utf-8'), json.dumps(stat_like, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
+        db.put(b"stat_author_" + date.encode('utf-8'), json.dumps(stat_author, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
+        db.put(b"stat_tag_" + date.encode('utf-8'), json.dumps(stat_tag, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
 
         wechat_push(f"内容保存完成, 新增: {count}, 下载图片中...")
 
@@ -197,9 +185,7 @@ def timer_task():
         success_counter = 0
         skip_counter = 0
 
-        from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
         limit = 20
-
         futures = set()
 
         with ThreadPoolExecutor(max_workers=8) as executor:
@@ -213,6 +199,11 @@ def timer_task():
         wechat_push("获取过程中发生未知错误, 程序中止: " + str(e))
         logging.error("未知错误", exc_info=e)
 
+
+# TODO: TEST AND REMOVE
+while True:
+    import time
+    time.sleep(1)
 
 timer_task()
 # 定时任务
