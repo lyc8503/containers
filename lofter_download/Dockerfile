@@ -23,7 +23,7 @@ RUN Deps="libdb5.3-dev build-essential" \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /etc/apt/sources.list
 
-RUN pip3 install html2text requests apscheduler tenacity lxml tzdata berkeleydb --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip3 install html2text requests apscheduler tenacity lxml tzdata berkeleydb tqdm --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 添加文件
 COPY *.py /lof/

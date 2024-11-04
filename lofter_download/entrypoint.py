@@ -200,11 +200,6 @@ def timer_task():
         logging.error("未知错误", exc_info=e)
 
 
-# TODO: TEST AND REMOVE
-while True:
-    import time
-    time.sleep(1)
-
 timer_task()
 # 定时任务
 scheduler = BlockingScheduler()
