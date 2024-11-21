@@ -1,2 +1,4 @@
 .env
 deploy.sh
+
+**/__pycache__/
