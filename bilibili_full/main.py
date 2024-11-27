@@ -41,8 +41,8 @@ if __name__ == "__main__":
     end = 10_0000_0000
 
     for i in range(PROCESS_COUNT):
-        left = start + (end - start) // PROCESS_COUNT * i
-        right = start + (end - start) // PROCESS_COUNT * (i + 1)
+        left = start + (end - start) * i // PROCESS_COUNT
+        right = start + (end - start) * (i + 1) // PROCESS_COUNT
         p = Process(target=asyncio.run, args=(main(left, right, i),))
         p.start()
         processes.append(p)
