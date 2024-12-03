@@ -20,7 +20,8 @@ async def main(start, end, pos):
                     av, ret = r.result()
                     
                     ret['_id'] = av
-                    buffer.append(ret)
+                    if ret['code'] != -114514:
+                        buffer.append(ret)
                     stats[ret['code']] = stats.get(ret['code'], 0) + 1
 
                     if len(buffer) >= 1000:
@@ -35,13 +36,13 @@ async def main(start, end, pos):
 
 
 if __name__ == "__main__":
-    PROCESS_COUNT = 2
+    PROCESS_COUNT = 4
     processes = []
-    start = 0
+    start = 7_1500_0000
     end = 10_0000_0000
 
     for i in range(PROCESS_COUNT):
-        left = start + (end - start) * i // PROCESS_COUNT
+        left = start + (end - start) * i // PROCESS_COUNT + 300_0000
         right = start + (end - start) * (i + 1) // PROCESS_COUNT
         p = Process(target=asyncio.run, args=(main(left, right, i),))
         p.start()
