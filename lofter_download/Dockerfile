@@ -14,16 +14,7 @@ RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
     && dpkg-reconfigure --frontend noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# 安装依赖
-RUN Deps="libdb5.3-dev build-essential" \
-    && echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian/ bookworm main contrib non-free non-free-firmware" > /etc/apt/sources.list \
-    && apt-get update \
-    && apt-get install $Deps --no-install-recommends --no-install-suggests -y  \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /etc/apt/sources.list
-
-RUN pip3 install html2text requests apscheduler tenacity lxml tzdata berkeleydb tqdm --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip3 install html2text requests apscheduler tenacity lxml tzdata lmdb tqdm --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 添加文件
 COPY *.py /lof/
