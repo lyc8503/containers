@@ -43,7 +43,10 @@ def get_author(author_name):
             del i['post']['blogSettings']
             del i['post']['blogInfo']
 
-            i['post']['hotComments'] = i['hotComments']
+            try:
+                i['post']['hotComments'] = i['hotComments']
+            except:
+                pass
             i = i['post']
 
             ret.append(i)

@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from berkeleydb import db as bdb
+import lmdb
 
 import requests
 from apscheduler.schedulers.blocking import BlockingScheduler
@@ -21,12 +21,7 @@ logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(leve
 if not os.path.exists("/download/img"):
     os.mkdir("/download/img")
 
-db = bdb.DB()
-if not os.path.exists("/download/posts.db"):
-    db.open("/download/posts.db", None, bdb.DB_HASH, bdb.DB_CREATE)
-else:
-    db.open("/download/posts.db", None, bdb.DB_HASH)
-
+env = lmdb.open('/download/posts.db', map_size=1099511627776)
 
 class SetEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -154,17 +149,18 @@ def timer_task():
         count = 0
         wechat_push(f"获取所有内容完成, 文章共计: {len(posts)}")
 
-        for k, v in posts.items():
-            if db.get(k.encode("utf-8")):
-                continue
+        with env.begin(write=True) as db:
+            for k, v in posts.items():
+                if db.get(k.encode("utf-8")):
+                    continue
 
-            db.put(k.encode("utf-8"), json.dumps(v, ensure_ascii=False).encode("utf-8"))
-            count += 1
+                db.put(k.encode("utf-8"), json.dumps(v, ensure_ascii=False).encode("utf-8"))
+                count += 1
 
-        date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-        db.put(b"stat_like_" + date.encode('utf-8'), json.dumps(stat_like, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
-        db.put(b"stat_author_" + date.encode('utf-8'), json.dumps(stat_author, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
-        db.put(b"stat_tag_" + date.encode('utf-8'), json.dumps(stat_tag, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
+            date = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+            db.put(b"stat_like_" + date.encode('utf-8'), json.dumps(stat_like, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
+            db.put(b"stat_author_" + date.encode('utf-8'), json.dumps(stat_author, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
+            db.put(b"stat_tag_" + date.encode('utf-8'), json.dumps(stat_tag, ensure_ascii=False, cls=SetEncoder).encode("utf-8"))
 
         wechat_push(f"内容保存完成, 新增: {count}, 下载图片中...")
 
