@@ -6,10 +6,11 @@ import logging
 from urllib.parse import quote
 
 from apscheduler.schedulers.blocking import BlockingScheduler
-from easyprocess import EasyProcess
 
 from tenacity import retry, wait_fixed, stop_after_attempt
 import requests
+
+import lmdb
 
 logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                     level=logging.INFO)
@@ -17,6 +18,7 @@ logging.basicConfig(format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(leve
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 ' \
              'Safari/537.36 '
 user_cookie = None
+env = None
 TIMEOUT = 20 * 60  # 20分钟
 
 # 输出位置
@@ -42,8 +44,78 @@ def validate_title(title):
     return new_title
 
 
+@retry(wait=wait_fixed(20), stop=stop_after_attempt(3), reraise=True)
+def download_video_file(bvid, cid, save_title):
+    referer = "https://www.bilibili.com/video/" + bvid
+
+    # 解析视频下载链接
+    r = requests.get("https://api.bilibili.com/x/player/playurl", params={
+        "bvid": bvid,
+        "cid": cid,
+        "qn": 80  # 1080P(但不登陆可能只能获取到 720P)
+    }, headers={
+        "Referer": referer,
+        "User-Agent": USER_AGENT
+    }).json()
+    
+    if 'data' not in r:
+        raise AssertionError("获取视频下载链接失败: " + str(r))
+    download_link = r['data']['durl'][0]['url']
+    # if '.mcdn.bilivideo.cn' in download_link:
+    #     logging.info('检测到 PCDN, 原链接: ' + download_link)
+    #     download_link = re.sub(r'://.*mcdn\.bilivideo\.cn:.*?/', '://upos-sz-mirrorcos.bilivideo.com/', download_link)
+
+    reason = None
+    
+    coin_status = requests.get('https://api.bilibili.com/x/web-interface/archive/coins', params={
+        "bvid": bvid
+    }, headers={
+        "Referer": referer,
+        "User-Agent": USER_AGENT
+    }, cookies=user_cookie).json()
+
+    if coin_status['data']['multiply'] > 0:
+        reason = "投币"
+
+    if not reason:
+        like_status = requests.get('https://api.bilibili.com/x/web-interface/archive/has/like', params={
+            "bvid": bvid
+        }, headers={
+            "Referer": referer,
+            "User-Agent": USER_AGENT
+        }, cookies=user_cookie).json()
+        if like_status['data'] > 0:
+            reason = "点赞"
+    
+    file_name = bvid + "_" + str(cid) + "_" + save_title
+
+    logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
+    download_r = requests.get(download_link, headers={
+        "Referer": referer,
+        "User-Agent": USER_AGENT
+    }, stream=False, timeout=TIMEOUT)
+
+    if reason and not os.path.exists(reason + "_" + file_name + ".mp4"):
+        logging.info('保存视频到本地, 原因: ' + reason)
+        with open(reason + "_" + file_name + ".mp4", "wb") as f:
+            f.write(download_r.content)
+
+    logging.info('上传视频中, 大小: ' + str(len(download_r.content) / 1024 / 1024) + ' MiB')
+    r = requests.post(os.environ['UPLOAD_URL'] + "/upload/" + quote(file_name + ".mp4", safe=''), files={
+        'file': download_r.content
+    }, timeout=TIMEOUT)
+
+    if not r.ok:
+        raise Exception("Request failed with code: " + str(r.status_code))
+
+
 @retry(wait=wait_fixed(10), stop=stop_after_attempt(3), reraise=True)
 def download_bvid(bvid, cid):
+    key = bvid + "_" + cid
+    with env.begin() as txn:
+        if txn.get((key + "_info").encode()):
+            logging.info("已经下载完成, 跳过: " + bvid)
+            return
 
     referer = "https://www.bilibili.com/video/" + bvid
 
@@ -58,69 +130,20 @@ def download_bvid(bvid, cid):
     info = r.json()
     if 'data' not in info:
         raise AssertionError("获取视频信息失败: " + r.text)
-    path_name = bvid + "_" + cid + "_" + validate_title(info['data']['title'])
-    try:
-        os.mkdir(path_name)
-    except Exception as e:
-        logging.debug(str(e))
-
-    # 同名视频已经下载完成即跳过
-    # if os.path.exists(path_name + os.sep + "video.flv") and not os.path.exists(path_name + os.sep + "video.flv.aria2"):
-    if os.path.exists(path_name + os.sep + "upload.info"):
-        logging.info("已经下载完成, 跳过: " + bvid)
-        return
-
-    # 保存视频基本信息
-    with open(path_name + os.sep + "info.json", "w", encoding="utf-8") as f:
-        f.write(r.text)
 
     # 保存视频弹幕
     r = requests.get("https://comment.bilibili.com/" + str(info['data']['cid']) + ".xml", headers={
         "Referer": referer,
         "User-Agent": USER_AGENT
     })
-    with open(path_name + os.sep + "danmaku.xml", "wb") as f:
-        f.write(r.content)
-
-    # 解析视频下载链接
-    r = requests.get("https://api.bilibili.com/x/player/playurl", params={
-        "bvid": bvid,
-        "cid": info['data']['cid'],
-        "qn": 80  # 1080P(但不登陆可能只能获取到 720P)
-    }, headers={
-        "Referer": referer,
-        "User-Agent": USER_AGENT
-    }).json()
-
-    if 'data' not in r:
-        raise AssertionError("获取视频下载链接失败: " + str(r))
-    download_link = r['data']['durl'][0]['url']
-    # if '.mcdn.bilivideo.cn' in download_link:
-    #     logging.info('检测到 PCDN, 原链接: ' + download_link)
-    #     download_link = re.sub(r'://.*mcdn\.bilivideo\.cn:.*?/', '://upos-sz-mirrorcos.bilivideo.com/', download_link)
-
-    logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
-    download_r = requests.get(download_link, headers={
-        "Referer": referer,
-        "User-Agent": USER_AGENT
-    }, stream=False, timeout=TIMEOUT)
-
-    logging.info('上传视频中, 大小: ' + str(len(download_r.content) / 1024 / 1024) + ' MiB')
-    r = requests.post(os.environ['UPLOAD_URL'] + "/upload/" + quote(path_name + ".mp4", safe=''), files={
-        'file': download_r.content
-    }, timeout=TIMEOUT)
-
     if not r.ok:
-        raise Exception("Request failed with code: " + str(r.status_code))
-    else:
-        with open(path_name + os.sep + "upload.info", "w") as f:
-            f.write(r.text)
-        logging.info('内容保存至: ' + path_name)
+        raise AssertionError("获取弹幕失败: " + r.text)
 
-    # ret = EasyProcess(["aria2c", "--referer=" + referer, "-o", path_name + os.sep + "video.flv",
-    #                    download_link]).call(timeout=TIMEOUT).return_code
-    # if ret != 0:
-    #     raise Exception("Download failed with code: " + str(ret))
+    download_video_file(bvid, cid, validate_title(info['data']['title']))
+    
+    with env.begin(write=True) as txn:
+        txn.put((key + "_info").encode(), json.dumps(info, ensure_ascii=False).encode())
+        txn.put((key + "_danmaku").encode(), r.text.encode())
 
 
 def check_and_download():
@@ -296,10 +319,17 @@ try:
 except:
     pass
 
-try_login()
-check_and_download()
 
-# 定时任务
-scheduler = BlockingScheduler()
-scheduler.add_job(check_and_download, 'cron', hour=os.environ['RUN_HOUR'], max_instances=1)
-scheduler.start()
+if __name__ == '__main__':
+    while True:
+        time.sleep(10)
+
+    env = lmdb.open("meta.db", map_size=1024 * 1024 * 1024)
+
+    try_login()
+    check_and_download()
+
+    # 定时任务
+    scheduler = BlockingScheduler()
+    scheduler.add_job(check_and_download, 'cron', hour=os.environ['RUN_HOUR'], max_instances=1)
+    scheduler.start()
