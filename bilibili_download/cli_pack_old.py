@@ -8,17 +8,21 @@ import lmdb
 from main import download_video_file, validate_title
 
 os.chdir("/download")
-env = lmdb.open("meta.db", map_size=1024 * 1024 * 1024)
+env = lmdb.open("meta.db", map_size=2 ** 40)
 
 for folder in os.listdir():
     if not os.path.isdir(folder):
         continue
 
-    with open(f"{folder}/info.json", "r") as f:
-        data = json.load(f)
+    try:
+        with open(f"{folder}/info.json", "r") as f:
+            data = json.load(f)
     
-    with open(f"{folder}/danmaku.xml", "r") as f:
-        danmaku = f.read()
+        with open(f"{folder}/danmaku.xml", "r") as f:
+            danmaku = f.read()
+    except:
+        logging.error(f"Failed to load {folder}")
+        continue
     
     cid = int(re.search(r"<chatid>(\d+)</chatid>", danmaku).group(1))
     bvid = data['data']['bvid']

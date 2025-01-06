@@ -7,8 +7,9 @@ from urllib.parse import quote
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-from tenacity import retry, wait_fixed, stop_after_attempt
+from tenacity import retry, wait_fixed, stop_after_attempt, retry_if_not_exception_type
 import requests
+from pySmartDL import SmartDL
 
 import lmdb
 
@@ -44,28 +45,9 @@ def validate_title(title):
     return new_title
 
 
-@retry(wait=wait_fixed(20), stop=stop_after_attempt(3), reraise=True)
-def download_video_file(bvid, cid, save_title):
-    referer = "https://www.bilibili.com/video/" + bvid
-
-    # 解析视频下载链接
-    r = requests.get("https://api.bilibili.com/x/player/playurl", params={
-        "bvid": bvid,
-        "cid": cid,
-        "qn": 80  # 1080P(但不登陆可能只能获取到 720P)
-    }, headers={
-        "Referer": referer,
-        "User-Agent": USER_AGENT
-    }).json()
-    
-    if 'data' not in r:
-        raise AssertionError("获取视频下载链接失败: " + str(r))
-    download_link = r['data']['durl'][0]['url']
-    # if '.mcdn.bilivideo.cn' in download_link:
-    #     logging.info('检测到 PCDN, 原链接: ' + download_link)
-    #     download_link = re.sub(r'://.*mcdn\.bilivideo\.cn:.*?/', '://upos-sz-mirrorcos.bilivideo.com/', download_link)
-
+def get_reason(bvid):
     reason = None
+    referer = "https://www.bilibili.com/video/" + bvid
     
     coin_status = requests.get('https://api.bilibili.com/x/web-interface/archive/coins', params={
         "bvid": bvid
@@ -87,22 +69,52 @@ def download_video_file(bvid, cid, save_title):
         if like_status['data'] > 0:
             reason = "点赞"
     
+    return reason
+
+
+@retry(wait=wait_fixed(20), stop=stop_after_attempt(3), reraise=True, retry=retry_if_not_exception_type(AssertionError))
+def download_video_file(bvid, cid, save_title):
+    referer = "https://www.bilibili.com/video/" + bvid
+
+    reason = get_reason(bvid)
+
+    # 解析视频下载链接
+    r = requests.get("https://api.bilibili.com/x/player/playurl", params={
+        "bvid": bvid,
+        "cid": cid,
+        "qn": 80  # 1080P(但不登陆可能只能获取到 720P)
+    }, headers={
+        "Referer": referer,
+        "User-Agent": USER_AGENT
+    }).json()
+    
+    if 'data' not in r:
+        raise AssertionError("获取视频下载链接失败: " + str(r))
+    download_link = r['data']['durl'][0]['url']
+    # if '.mcdn.bilivideo.cn' in download_link:
+    logging.info('检测到 PCDN, 原链接: ' + download_link)
+    download_link = re.sub(r'://.*?/', '://upos-sz-mirror08c.bilivideo.com/', download_link)
+    
     file_name = bvid + "_" + str(cid) + "_" + save_title
 
     logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
-    download_r = requests.get(download_link, headers={
+
+    request_args = {"headers": {
         "Referer": referer,
         "User-Agent": USER_AGENT
-    }, stream=False, timeout=TIMEOUT)
+    }}
+    download_r = SmartDL(download_link, request_args=request_args, progress_bar=False)
+    download_r.start()
 
     if reason and not os.path.exists(reason + "_" + file_name + ".mp4"):
         logging.info('保存视频到本地, 原因: ' + reason)
         with open(reason + "_" + file_name + ".mp4", "wb") as f:
-            f.write(download_r.content)
+            f.write(download_r.get_data(binary=True))
 
-    logging.info('上传视频中, 大小: ' + str(len(download_r.content) / 1024 / 1024) + ' MiB')
+    logging.info('上传视频中, 大小: ' + str(len(download_r.get_data(binary=True)) / 1024 / 1024) + ' MiB')
+    
     r = requests.post(os.environ['UPLOAD_URL'] + "/upload/" + quote(file_name + ".mp4", safe=''), files={
-        'file': download_r.content
+        'file': download_r.get_data(binary=True)
     }, timeout=TIMEOUT)
 
     if not r.ok:
@@ -321,10 +333,7 @@ except:
 
 
 if __name__ == '__main__':
-    while True:
-        time.sleep(10)
-
-    env = lmdb.open("meta.db", map_size=1024 * 1024 * 1024)
+    env = lmdb.open("meta.db", map_size=2 ** 40)
 
     try_login()
     check_and_download()

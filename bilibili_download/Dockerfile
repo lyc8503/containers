@@ -15,7 +15,7 @@ RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime \
     && dpkg-reconfigure --frontend noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install requests apscheduler tenacity lmdb --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip3 install requests apscheduler tenacity lmdb pySmartDL --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 COPY *.py /bilidown/
 
