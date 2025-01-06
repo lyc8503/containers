@@ -39,7 +39,8 @@ async def upload(request: web.Request):
     data = await request.post()
     print(data)
 
-    uploaded_file = await upload_file(tg, data['file'].file)
+    # uploaded_file = await tg.upload_file(data['file'].file, file_name=path)
+    uploaded_file = await upload_file(tg, data['file'].file, 'upload')
     result = await tg.send_file(entity=TG_ENTITY, caption=path, file=uploaded_file)
     
     print(str(result))
