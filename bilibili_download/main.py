@@ -92,29 +92,36 @@ def download_video_file(bvid, cid, save_title):
         raise AssertionError("获取视频下载链接失败: " + str(r))
     download_link = r['data']['durl'][0]['url']
     # if '.mcdn.bilivideo.cn' in download_link:
-    logging.info('检测到 PCDN, 原链接: ' + download_link)
-    download_link = re.sub(r'://.*?/', '://upos-sz-mirror08c.bilivideo.com/', download_link)
+    # logging.info('检测到 PCDN, 原链接: ' + download_link)
+    # download_link = re.sub(r'://.*?/', '://upos-sz-mirror08c.bilivideo.com/', download_link)
     
     file_name = bvid + "_" + str(cid) + "_" + save_title
 
     logging.info('下载视频中: quality ' + str(r['data']['quality']) + ' ' + download_link)
 
-    request_args = {"headers": {
+    # request_args = {"headers": {
+    #     "Referer": referer,
+    #     "User-Agent": USER_AGENT
+    # }}
+    # download_r = SmartDL(download_link, request_args=request_args, progress_bar=False)
+    # download_r.start()
+
+    # data = download_r.get_data(binary=True)
+
+    data = requests.get(download_link, headers={
         "Referer": referer,
         "User-Agent": USER_AGENT
-    }}
-    download_r = SmartDL(download_link, request_args=request_args, progress_bar=False)
-    download_r.start()
+    }, timeout=TIMEOUT).content
 
     if reason and not os.path.exists(reason + "_" + file_name + ".mp4"):
         logging.info('保存视频到本地, 原因: ' + reason)
         with open(reason + "_" + file_name + ".mp4", "wb") as f:
-            f.write(download_r.get_data(binary=True))
+            f.write(data)
 
-    logging.info('上传视频中, 大小: ' + str(len(download_r.get_data(binary=True)) / 1024 / 1024) + ' MiB')
+    logging.info('上传视频中, 大小: ' + str(len(data) / 1024 / 1024) + ' MiB')
     
     r = requests.post(os.environ['UPLOAD_URL'] + "/upload/" + quote(file_name + ".mp4", safe=''), files={
-        'file': download_r.get_data(binary=True)
+        'file': data
     }, timeout=TIMEOUT)
 
     if not r.ok:
